@@ -2,6 +2,13 @@ package com.bidbuygo.dev;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
+
+import com.bidbuygo.listing.Listing;
+import com.bidbuygo.listing.ListingRepository;
+import com.bidbuygo.listing.ListingType;
 import com.bidbuygo.user.Role;
 import com.bidbuygo.user.User;
 import com.bidbuygo.user.UserRepository;
@@ -20,6 +27,7 @@ class DevDataSeederTest {
     @Autowired UserRepository userRepository;
     @Autowired WalletRepository walletRepository;
     @Autowired WalletTransactionRepository transactionRepository;
+    @Autowired ListingRepository listingRepository;
 
     @Test
     void seedsExpectedAccounts() {
@@ -42,15 +50,34 @@ class DevDataSeederTest {
     }
 
     @Test
+    void seedsListingsFromVerifiedSeller() {
+        User seller = userRepository.findByEmail(DevDataSeeder.VERIFIED_SELLER).orElseThrow();
+        List<Listing> seeded = listingRepository.findAll().stream()
+                .filter(l -> l.getSellerId().equals(seller.getId()))
+                .filter(l -> SEEDED_TITLES.contains(l.getTitle()))
+                .toList();
+
+        assertThat(seeded).hasSize(4);
+        assertThat(seeded).filteredOn(l -> l.getType() == ListingType.FIXED).hasSize(2);
+        assertThat(seeded).filteredOn(l -> l.getType() == ListingType.AUCTION).hasSize(2)
+                .allSatisfy(l -> assertThat(l.getEndsAt()).isAfter(Instant.now().plus(6, ChronoUnit.DAYS)));
+    }
+
+    @Test
     void rerunningIsIdempotent() {
         long users = userRepository.count();
         long entries = transactionRepository.count();
+        long listings = listingRepository.count();
 
         seeder.run(null);
 
         assertThat(userRepository.count()).isEqualTo(users);
         assertThat(transactionRepository.count()).isEqualTo(entries);
+        assertThat(listingRepository.count()).isEqualTo(listings);
     }
+
+    private static final List<String> SEEDED_TITLES =
+            DevDataSeeder.listingDrafts(Instant.now()).stream().map(d -> d.title()).toList();
 
     private User assertUser(String email, Role role, boolean verified, int completedOrders) {
         User user = userRepository.findByEmail(email).orElseThrow();

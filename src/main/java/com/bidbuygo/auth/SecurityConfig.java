@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -34,6 +35,11 @@ public class SecurityConfig {
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(errorHandler).accessDeniedHandler(errorHandler))
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers(path.matcher("/auth/**"), path.matcher("/error")).permitAll();
+                    // Browsing is public; every other /listings call (create, check) needs a token.
+                    auth.requestMatchers(path.matcher(HttpMethod.GET, "/listings"),
+                            path.matcher(HttpMethod.GET, "/listings/{id}")).permitAll();
+                    // Controllers also use @PreAuthorize; this is a backstop for any admin endpoint that forgets it.
+                    auth.requestMatchers(path.matcher("/admin/**")).hasRole("ADMIN");
                     auth.requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll();
                     if (dev) {
                         auth.requestMatchers(PathRequest.toH2Console()).permitAll();

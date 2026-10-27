@@ -17,6 +17,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @Slf4j
 @RestControllerAdvice
@@ -47,6 +48,16 @@ public class GlobalExceptionHandler {
         } else if (ex.getCause() instanceof JsonMappingException jme && !jme.getPath().isEmpty()) {
             reason = fieldPath(jme) + " has an invalid value";
         }
+        return ResponseEntity.badRequest().body(new ApiError("Malformed request", List.of(reason)));
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    ResponseEntity<ApiError> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        Class<?> type = ex.getRequiredType();
+        String reason = type != null && type.isEnum()
+                ? ex.getName() + " must be one of: " + Arrays.stream(type.getEnumConstants())
+                        .map(Object::toString).collect(Collectors.joining(", "))
+                : ex.getName() + " has an invalid value";
         return ResponseEntity.badRequest().body(new ApiError("Malformed request", List.of(reason)));
     }
 

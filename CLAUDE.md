@@ -27,6 +27,14 @@ Admins set the auction eligibility policy and review listings.
 - Every rule rejection returns a list of human-readable reasons: throw `common.error.ApiException(status, message, reasons)`;
   `GlobalExceptionHandler` renders `{message, reasons}`. Security 401/403 use the same shape.
 - Current user in controllers: `@AuthenticationPrincipal AuthUser` (id, email, role from the JWT).
+  For rules that depend on seller trust (verified, completedOrders), reload the `User`; the token can be stale.
+- Status codes: 400 malformed/invalid input, 422 valid input that a business rule rejects (e.g. auction eligibility),
+  409 state conflicts (duplicate email, wrong listing status).
+- Auction eligibility lives in `policy.EligibilityService.evaluate`; it collects every failing rule, never stops early.
+  The policy is a single row (id 1) seeded in all profiles by `AuctionPolicySeeder`. Seeders are ordered
+  ApplicationRunners: policy `@Order(0)`, dev data `@Order(10)`.
+- Integration tests share one Spring context and H2 database: use unique data, and restore anything global
+  (e.g. the auction policy) in `@AfterEach`.
 
 ## Concurrency
 

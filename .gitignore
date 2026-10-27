@@ -1,0 +1,31 @@
+# Build
+target/
+!.mvn/wrapper/maven-wrapper.jar
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.classpath
+.project
+.settings/
+.factorypath
+.apt_generated/
+.sts4-cache/
+bin/
+out/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs / local DB files
+*.log
+*.db

@@ -1,0 +1,12 @@
+# Activate with: SPRING_PROFILES_ACTIVE=postgres
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/bidbuygo}
+    username: ${DB_USERNAME:bidbuygo}
+    password: ${DB_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: update
+  h2:
+    console:
+      enabled: false

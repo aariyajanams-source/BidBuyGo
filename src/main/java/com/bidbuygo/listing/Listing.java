@@ -108,6 +108,11 @@ public class Listing {
         return category.trim().toLowerCase(Locale.ROOT);
     }
 
+    /** Callers must hold the listing's PESSIMISTIC_WRITE lock (see ListingService.lockForUpdate). */
+    public void markSold() {
+        this.status = ListingStatus.SOLD;
+    }
+
     void reject(String reason) {
         this.status = ListingStatus.REJECTED;
         this.rejectionReason = reason;

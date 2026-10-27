@@ -7,7 +7,7 @@ public enum WalletTransactionType {
     HOLD,
     /** Un-reserve funds (e.g. outbid): held -= amount, available += amount. */
     RELEASE,
-    /** Spend reserved funds (e.g. auction won): held -= amount. */
+    /** Money leaves for a purchase, from held (auction win) or available (buy now); the deltas say which. */
     CAPTURE,
     /** Internal money in (e.g. seller payout): available += amount. */
     CREDIT

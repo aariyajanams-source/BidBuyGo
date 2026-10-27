@@ -41,8 +41,15 @@ Admins set the auction eligibility policy and review listings.
 - In any flow touching money or bids, lock the listing row first (`PESSIMISTIC_WRITE`),
   then lock wallets in ascending wallet id order to avoid deadlocks.
 - Wallet invariant: `available` + `held` change only via ledger entries.
-  In code: `Wallet.apply` is package-private and only `WalletService.record` calls it, together with saving
-  the `WalletTransaction`. Add new money flows as `WalletService` methods; lock with `WalletRepository.findByUserIdForUpdate`.
+  In code: `Wallet.applyDelta` is package-private and only `WalletService.record` calls it, together with saving
+  the `WalletTransaction` (signed `availableDelta`/`heldDelta`, so replaying a wallet's rows from zero gives its balances).
+- Money flow recipe, all in one `@Transactional` service method:
+  1. `listingService.lockForUpdate(id)`, then re-check status under the lock.
+  2. `walletService.lockWallets(userIds)`: locks in ascending wallet id order. Never lock wallets any other way.
+  3. `hold` / `release` / `captureHeld` / `chargeAvailable` / `credit` (propagation MANDATORY; they refuse
+     unlocked wallets and negative balances).
+- Seller `completedOrders` is incremented with an atomic UPDATE (`UserService.incrementCompletedOrders`).
+- `orders.listing_id` is unique: one sale per listing, enforced by the database.
 
 ## Out of scope (roadmap)
 

@@ -17,7 +17,10 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** Immutable ledger entry. Amount is in paise and always positive; the type gives the direction. */
+/**
+ * Immutable ledger entry. {@code amount} is the positive size of the movement; {@code availableDelta} and
+ * {@code heldDelta} are the signed changes it made, so summing a wallet's deltas from zero reproduces its balances.
+ */
 @Entity
 @Table(name = "wallet_transactions")
 @Getter
@@ -40,12 +43,26 @@ public class WalletTransaction {
     private long amount;
 
     @Column(nullable = false, updatable = false)
+    private long availableDelta;
+
+    @Column(nullable = false, updatable = false)
+    private long heldDelta;
+
+    /** The listing this movement relates to; null for deposits. */
+    @Column(updatable = false)
+    private Long listingId;
+
+    @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
-    WalletTransaction(Wallet wallet, WalletTransactionType type, long amount) {
+    WalletTransaction(Wallet wallet, WalletTransactionType type, long amount, long availableDelta, long heldDelta,
+                      Long listingId) {
         this.wallet = wallet;
         this.type = type;
         this.amount = amount;
+        this.availableDelta = availableDelta;
+        this.heldDelta = heldDelta;
+        this.listingId = listingId;
         this.createdAt = Instant.now();
     }
 }

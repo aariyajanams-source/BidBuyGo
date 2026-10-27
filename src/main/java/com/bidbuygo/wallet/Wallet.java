@@ -9,14 +9,16 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Check;
 
 /**
  * Balances are in paise. No @Version: concurrent writers are serialized with PESSIMISTIC_WRITE locks.
- * Balances have no setters; they change only through {@link #apply}, which WalletService calls
- * alongside writing the matching WalletTransaction.
+ * Balances have no setters; they change only through {@link #applyDelta}, which WalletService calls
+ * alongside writing the matching WalletTransaction. The CHECK constraint is a last line of defense.
  */
 @Entity
 @Table(name = "wallets")
+@Check(constraints = "available_balance >= 0 and held_balance >= 0")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Wallet {
@@ -38,32 +40,17 @@ public class Wallet {
         this.userId = userId;
     }
 
-    void apply(WalletTransactionType type, long amount) {
-        if (amount <= 0) {
-            throw new IllegalArgumentException("Ledger amount must be positive, got " + amount);
+    /** Applies signed changes to both balances, refusing any change that would leave either negative. */
+    void applyDelta(long availableDelta, long heldDelta) {
+        long newAvailable = Math.addExact(availableBalance, availableDelta);
+        long newHeld = Math.addExact(heldBalance, heldDelta);
+        if (newAvailable < 0) {
+            throw new InsufficientFundsException(id, "available", availableBalance, -availableDelta);
         }
-        switch (type) {
-            case DEPOSIT, CREDIT -> availableBalance = Math.addExact(availableBalance, amount);
-            case HOLD -> {
-                requireSufficient(availableBalance, amount, "available");
-                availableBalance -= amount;
-                heldBalance = Math.addExact(heldBalance, amount);
-            }
-            case RELEASE -> {
-                requireSufficient(heldBalance, amount, "held");
-                heldBalance -= amount;
-                availableBalance = Math.addExact(availableBalance, amount);
-            }
-            case CAPTURE -> {
-                requireSufficient(heldBalance, amount, "held");
-                heldBalance -= amount;
-            }
+        if (newHeld < 0) {
+            throw new InsufficientFundsException(id, "held", heldBalance, -heldDelta);
         }
-    }
-
-    private void requireSufficient(long balance, long amount, String bucket) {
-        if (balance < amount) {
-            throw new IllegalStateException("Wallet " + id + " has " + balance + " " + bucket + " paise, needs " + amount);
-        }
+        availableBalance = newAvailable;
+        heldBalance = newHeld;
     }
 }

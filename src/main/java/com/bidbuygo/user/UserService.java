@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -44,6 +45,13 @@ public class UserService {
     public User get(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found", "No user with id " + id));
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void incrementCompletedOrders(Long sellerId) {
+        if (userRepository.incrementCompletedOrders(sellerId) != 1) {
+            throw new IllegalStateException("No user with id " + sellerId);
+        }
     }
 
     public static String normalizeEmail(String email) {

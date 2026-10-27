@@ -1,7 +1,10 @@
 package com.bidbuygo.listing;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.bidbuygo.auth.AuthUser;
 import com.bidbuygo.common.error.ApiException;
@@ -12,6 +15,7 @@ import com.bidbuygo.user.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -73,7 +77,7 @@ public class ListingService {
 
     @Transactional
     public ListingResponse reject(Long id, String reason) {
-        Listing listing = listingRepository.findByIdForUpdate(id).orElseThrow(() -> notFound(id));
+        Listing listing = lockForUpdate(id);
         if (listing.getStatus() != ListingStatus.ACTIVE) {
             throw new ApiException(HttpStatus.CONFLICT, "Listing cannot be rejected",
                     "Only ACTIVE listings can be rejected; this listing is " + listing.getStatus());
@@ -84,6 +88,17 @@ public class ListingService {
         }
         listing.reject(reason.trim());
         return ListingResponse.from(listing);
+    }
+
+    /** Step one of any money or bid flow: lock the listing row before touching wallets. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Listing lockForUpdate(Long id) {
+        return listingRepository.findByIdForUpdate(id).orElseThrow(() -> notFound(id));
+    }
+
+    @Transactional(readOnly = true)
+    public Map<Long, String> titlesById(Collection<Long> ids) {
+        return listingRepository.findAllById(ids).stream().collect(Collectors.toMap(Listing::getId, Listing::getTitle));
     }
 
     @Transactional(readOnly = true)

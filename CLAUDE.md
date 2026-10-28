@@ -1,7 +1,7 @@
 # BidBuyGo
 
 Spring Boot 3.5 / Java 21 / Maven. Base package `com.bidbuygo`.
-Build & test: `./mvnw test` from Git Bash. Maven is not installed globally; always use the wrapper.
+Build & test: `./mvnw test` (or `./mvnw clean verify` for everything) from Git Bash. Maven is not installed globally; always use the wrapper.
 Don't use `mvnw.cmd`: it fails because the apostrophe in the project path ("AARIYA's WORKLOG") breaks its PowerShell call.
 `JAVA_HOME` must point to a JDK directory (e.g. `/c/Program Files/Java/jdk-24`).
 Default profile is `dev` (in-memory H2, H2 console, idempotent seed data in `dev.DevDataSeeder`, password `password123`).
@@ -47,6 +47,11 @@ Admins set the auction eligibility policy and review listings.
   each one forces a new context. Use unique data (`support.Fixtures`) and restore
   anything global (the auction policy; `MutableClock.reset()` after `advance`) in `@AfterEach`.
   Money tests should finish with `Fixtures.assertLedgerReconstructsEveryWallet` and `assertAuctionHoldsMatchHighBids`.
+- Concurrency proof: logic in the abstract `bid.ConcurrentBiddingProof`. `ConcurrentBiddingProofTest` (H2,
+  `@IntegrationTest`, surefire) and `ConcurrentBiddingProofPostgresIT` (Postgres 16 via Testcontainers, postgres
+  profile, failsafe in `verify`, skipped without Docker). `*IT` classes run in their own JVM, so they are the one
+  allowed exception to "never a bare `@SpringBootTest`". `./mvnw clean test` stays H2-only;
+  `./mvnw clean verify` runs both (CI: `.github/workflows/ci.yml`).
 
 ## Concurrency
 

@@ -26,7 +26,7 @@ public class BidController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('BUYER', 'SELLER')")
-    public BidResponse place(@PathVariable Long id, @AuthenticationPrincipal AuthUser principal,
+    public PlacedBidResponse place(@PathVariable Long id, @AuthenticationPrincipal AuthUser principal,
                              @Valid @RequestBody PlaceBidRequest request) {
         return bidService.placeBid(id, principal.id(), request.amount());
     }

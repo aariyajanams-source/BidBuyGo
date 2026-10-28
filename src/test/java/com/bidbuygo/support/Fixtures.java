@@ -18,6 +18,7 @@ import com.bidbuygo.listing.ListingStatus;
 import com.bidbuygo.listing.ListingType;
 import com.bidbuygo.user.Role;
 import com.bidbuygo.user.User;
+import com.bidbuygo.user.UserRepository;
 import com.bidbuygo.user.UserService;
 import com.bidbuygo.wallet.Wallet;
 import com.bidbuygo.wallet.WalletRepository;
@@ -48,12 +49,32 @@ public final class Fixtures {
         return listingService.create(sellerId, draft).id();
     }
 
-    /** Needs a seller that passes the default auction policy (e.g. the seeded verified seller). */
+    /** A fresh SELLER who passes the default auction policy (verified, 10 completed orders). */
+    public static User trustedSeller(UserService userService, UserRepository userRepository) {
+        User seller = user(userService, Role.SELLER);
+        seller.setVerified(true);
+        seller.setCompletedOrders(10);
+        return userRepository.save(seller);
+    }
+
+    /** Start ₹200.00, reserve ₹500.00, ends in 1 day. Needs a seller that passes the default auction policy. */
     public static long auctionListing(ListingService listingService, Long sellerId) {
+        return auctionListing(listingService, sellerId, Instant.now().plus(1, ChronoUnit.DAYS));
+    }
+
+    public static long auctionListing(ListingService listingService, Long sellerId, Instant endsAt) {
         ListingDraft draft = new ListingDraft("Auction item " + UUID.randomUUID(), null, "collectibles",
                 ConditionGrade.GOOD, List.of("https://img.test/1.jpg", "https://img.test/2.jpg"), ListingType.AUCTION,
-                null, 20_000L, 50_000L, Instant.now().plus(1, ChronoUnit.DAYS));
+                null, 20_000L, 50_000L, endsAt);
         return listingService.create(sellerId, draft).id();
+    }
+
+    /** Net money currently held for a listing across all wallets (sum of heldDelta of rows tagged with it). */
+    public static long heldForListing(WalletTransactionRepository transactionRepository, long listingId) {
+        return transactionRepository.findAll().stream()
+                .filter(t -> Long.valueOf(listingId).equals(t.getListingId()))
+                .mapToLong(WalletTransaction::getHeldDelta)
+                .sum();
     }
 
     /**

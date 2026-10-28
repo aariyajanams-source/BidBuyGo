@@ -47,12 +47,12 @@ public class Order {
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
-    Order(Long listingId, Long buyerId, Long sellerId, long amountPaise, OrderType type) {
+    Order(Long listingId, Long buyerId, Long sellerId, long amountPaise, OrderType type, Instant createdAt) {
         this.listingId = listingId;
         this.buyerId = buyerId;
         this.sellerId = sellerId;
         this.amountPaise = amountPaise;
         this.type = type;
-        this.createdAt = Instant.now();
+        this.createdAt = createdAt;
     }
 }

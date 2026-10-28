@@ -28,3 +28,10 @@ bidbuygo:
     # Base64-encoded HMAC key, at least 256 bits. Override via JWT_SECRET outside local dev.
     secret: ${JWT_SECRET:ZGV2LW9ubHktc2VjcmV0LWNoYW5nZS1tZS1kZXYtb25seS1zZWNyZXQtY2hhbmdlLW1l}
     expiration-minutes: ${JWT_EXPIRATION_MINUTES:60}
+  auction:
+    snipe-window-seconds: 30
+    extension-seconds: 30
+    close-poll-ms: 5000
+  scheduler:
+    # Tests set this to false and close auctions by calling the settlement service directly.
+    enabled: true

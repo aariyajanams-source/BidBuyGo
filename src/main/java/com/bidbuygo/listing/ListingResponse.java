@@ -25,7 +25,8 @@ public record ListingResponse(
         Long currentHighBid,
         Long highBidderId,
         int bidCount,
-        Boolean viewerIsHighBidder) {
+        Boolean viewerIsHighBidder,
+        CloseReason closeReason) {
 
     /** Must be called inside a transaction: photoUrls is lazily loaded. */
     static ListingResponse from(Listing l) {
@@ -37,6 +38,6 @@ public record ListingResponse(
         return new ListingResponse(l.getId(), l.getSellerId(), l.getTitle(), l.getDescription(), l.getCategory(),
                 l.getConditionGrade(), List.copyOf(l.getPhotoUrls()), l.getType(), l.getStatus(), l.getCreatedAt(),
                 l.getRejectionReason(), l.getFixedPrice(), l.getStartPrice(), l.getReservePrice(), l.getEndsAt(),
-                l.getCurrentHighBid(), l.getHighBidderId(), l.getBidCount(), viewerIsHighBidder);
+                l.getCurrentHighBid(), l.getHighBidderId(), l.getBidCount(), viewerIsHighBidder, l.getCloseReason());
     }
 }

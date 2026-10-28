@@ -35,7 +35,9 @@ Admins set the auction eligibility policy and review listings.
   ApplicationRunners: policy `@Order(0)`, dev data `@Order(10)`.
 - Time: inject `java.time.Clock` (bean in `common.time.ClockConfig`); never call `Instant.now()` in listing/bid logic.
 - Tests: annotate Spring tests with `support.IntegrationTest`, never a bare `@SpringBootTest`. A second Spring context
-  would re-run create-drop on the shared in-memory H2 database. Use unique data (`support.Fixtures`) and restore
+  would re-run create-drop on the shared in-memory H2 database. It also disables the scheduler; settle auctions by
+  calling `closeIfDue` or `AuctionCloseJob.runOnce()` after advancing `MutableClock`. Avoid `@MockitoBean`/`@MockitoSpyBean`:
+  each one forces a new context. Use unique data (`support.Fixtures`) and restore
   anything global (the auction policy; `MutableClock.reset()` after `advance`) in `@AfterEach`.
   Money tests should finish with `Fixtures.assertLedgerReconstructsEveryWallet` and `assertAuctionHoldsMatchHighBids`.
 
@@ -56,6 +58,21 @@ Admins set the auction eligibility policy and review listings.
 - Auction hold invariant: for each ACTIVE auction, the only money held for it is `currentHighBid`, held from
   `highBidderId` (every HOLD/RELEASE row carries the listingId). `BidService.placeBid` releases the previous leader in
   full, or holds only the difference when the leader raises their own bid.
+- Anti-sniping (in `BidService.placeBid`, under the listing lock, after the bid is accepted): if `endsAt - now` is at
+  most `bidbuygo.auction.snipe-window-seconds` (30), `endsAt += extension-seconds` (30). The response carries the new
+  `endsAt` and `extended`. A bid at or after `endsAt` is still rejected as ended.
+- Auction settlement:
+  - `AuctionCloseScheduler` (`@ConditionalOnProperty bidbuygo.scheduler.enabled`, every `close-poll-ms`) calls
+    `AuctionCloseJob.runOnce()`: an unlocked ids-only query for due auctions, then
+    `AuctionSettlementService.closeIfDue(id)` per id. Each call is its own transaction; failures are logged and retried
+    on the next pass.
+  - `closeIfDue`: lock the listing, then re-check ACTIVE AUCTION with `endsAt <= now`, else no-op (idempotent, and
+    safe after an extension). Then:
+    - reserve met: lock winner + seller wallets, `captureHeld` the winner, `credit` the seller, AUCTION_WIN order,
+      SOLD / closeReason SOLD, increment completedOrders;
+    - reserve not met: `release` the winner, CLOSED / RESERVE_NOT_MET;
+    - no bids: CLOSED / NO_BIDS.
+  - Afterwards nothing is held for the listing.
 - Seller `completedOrders` is incremented with an atomic UPDATE (`UserService.incrementCompletedOrders`).
 - `orders.listing_id` is unique: one sale per listing, enforced by the database.
 

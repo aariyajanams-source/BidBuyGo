@@ -1,5 +1,6 @@
 package com.bidbuygo.order;
 
+import java.time.Clock;
 import java.util.List;
 import java.util.Map;
 
@@ -15,6 +16,7 @@ import com.bidbuygo.wallet.WalletService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -25,6 +27,7 @@ public class OrderService {
     private final WalletService walletService;
     private final UserService userService;
     private final OrderRepository orderRepository;
+    private final Clock clock;
 
     /**
      * Buy-now in one transaction. Lock order per CLAUDE.md: listing row first, then buyer and seller wallets in
@@ -60,10 +63,18 @@ public class OrderService {
 
         walletService.chargeAvailable(buyerWallet, price, listingId);
         walletService.credit(wallets.get(sellerId), price, listingId);
-        Order order = orderRepository.save(new Order(listingId, buyerId, sellerId, price, OrderType.FIXED_PURCHASE));
+        Order order = orderRepository.save(
+                new Order(listingId, buyerId, sellerId, price, OrderType.FIXED_PURCHASE, clock.instant()));
         listing.markSold();
         userService.incrementCompletedOrders(sellerId);
         return OrderResponse.from(order, listing.getTitle(), buyerId);
+    }
+
+    /** Called by auction settlement inside its transaction, after the money has moved. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Order recordAuctionWin(Long listingId, Long winnerId, Long sellerId, long amountPaise) {
+        return orderRepository.save(
+                new Order(listingId, winnerId, sellerId, amountPaise, OrderType.AUCTION_WIN, clock.instant()));
     }
 
     @Transactional(readOnly = true)

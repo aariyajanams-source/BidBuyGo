@@ -1,5 +1,6 @@
 package com.bidbuygo.listing;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -87,6 +88,10 @@ public class Listing {
     @Column(nullable = false)
     private int bidCount = 0;
 
+    @Enumerated(EnumType.STRING)
+    @Column(length = 16)
+    private CloseReason closeReason;
+
     static Listing create(Long sellerId, ListingDraft draft, Instant now) {
         Listing listing = new Listing();
         listing.sellerId = sellerId;
@@ -112,9 +117,26 @@ public class Listing {
         return category.trim().toLowerCase(Locale.ROOT);
     }
 
-    /** Callers must hold the listing's PESSIMISTIC_WRITE lock (see ListingService.lockForUpdate). */
+    // The state changes below require the caller to hold the listing's PESSIMISTIC_WRITE lock
+    // (see ListingService.lockForUpdate).
+
     public void markSold() {
         this.status = ListingStatus.SOLD;
+        this.closeReason = CloseReason.SOLD;
+    }
+
+    /** Ends an auction without a sale. */
+    public void closeUnsold(CloseReason reason) {
+        if (reason == CloseReason.SOLD) {
+            throw new IllegalArgumentException("Use markSold for a sale");
+        }
+        this.status = ListingStatus.CLOSED;
+        this.closeReason = reason;
+    }
+
+    /** Anti-sniping: push the end of an auction out by the given amount. */
+    public void extendEndsAt(Duration extension) {
+        this.endsAt = this.endsAt.plus(extension);
     }
 
     void reject(String reason) {
@@ -122,7 +144,7 @@ public class Listing {
         this.rejectionReason = reason;
     }
 
-    /** Records an accepted bid as the new leader. Callers must hold the listing's PESSIMISTIC_WRITE lock. */
+    /** Records an accepted bid as the new leader. */
     public void acceptBid(Long bidderId, long amount) {
         this.highBidderId = bidderId;
         this.currentHighBid = amount;

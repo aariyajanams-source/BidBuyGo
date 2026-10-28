@@ -12,10 +12,11 @@ import org.springframework.boot.test.context.SpringBootTest;
  * Use on every Spring integration test instead of a bare @SpringBootTest. Identical configuration means one cached
  * Spring context for the whole suite; a second context would re-run create-drop against the shared in-memory H2
  * database and wipe the first one's data.
+ * The auction close scheduler is off: tests settle auctions deterministically via AuctionSettlementService / AuctionCloseJob.
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
-@SpringBootTest
+@SpringBootTest(properties = "bidbuygo.scheduler.enabled=false")
 @AutoConfigureMockMvc
 public @interface IntegrationTest {
 }

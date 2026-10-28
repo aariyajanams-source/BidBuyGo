@@ -113,6 +113,12 @@ public class ListingService {
         return Locks.ensureWriteLocked(entityManager, listing);
     }
 
+    /** Ids of ACTIVE auctions whose end time has passed. No locks; callers re-check under lockForUpdate. */
+    @Transactional(readOnly = true)
+    public List<Long> findDueAuctionIds() {
+        return listingRepository.findDueAuctionIds(clock.instant());
+    }
+
     @Transactional(readOnly = true)
     public Map<Long, String> titlesById(Collection<Long> ids) {
         return listingRepository.findAllById(ids).stream().collect(Collectors.toMap(Listing::getId, Listing::getTitle));

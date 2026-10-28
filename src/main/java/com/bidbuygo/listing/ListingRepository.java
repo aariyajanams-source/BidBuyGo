@@ -1,5 +1,6 @@
 package com.bidbuygo.listing;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,6 +27,16 @@ public interface ListingRepository extends JpaRepository<Listing, Long> {
     List<Listing> search(@Param("status") ListingStatus status,
                          @Param("type") ListingType type,
                          @Param("category") String category);
+
+    /** Plain read, no locks: the settlement service re-checks each one under the listing lock. */
+    @Query("""
+            select l.id from Listing l
+            where l.type = com.bidbuygo.listing.ListingType.AUCTION
+              and l.status = com.bidbuygo.listing.ListingStatus.ACTIVE
+              and l.endsAt <= :now
+            order by l.endsAt, l.id
+            """)
+    List<Long> findDueAuctionIds(@Param("now") Instant now);
 
     List<Listing> findAllByOrderByIdDesc();
 

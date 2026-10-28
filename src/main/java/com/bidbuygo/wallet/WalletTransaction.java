@@ -56,13 +56,13 @@ public class WalletTransaction {
     private Instant createdAt;
 
     WalletTransaction(Wallet wallet, WalletTransactionType type, long amount, long availableDelta, long heldDelta,
-                      Long listingId) {
+                      Long listingId, Instant createdAt) {
         this.wallet = wallet;
         this.type = type;
         this.amount = amount;
         this.availableDelta = availableDelta;
         this.heldDelta = heldDelta;
         this.listingId = listingId;
-        this.createdAt = Instant.now();
+        this.createdAt = createdAt;
     }
 }

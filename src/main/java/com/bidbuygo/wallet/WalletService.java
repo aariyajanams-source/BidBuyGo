@@ -1,5 +1,6 @@
 package com.bidbuygo.wallet;
 
+import java.time.Clock;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -29,6 +30,7 @@ public class WalletService {
     private final WalletRepository walletRepository;
     private final WalletTransactionRepository transactionRepository;
     private final EntityManager entityManager;
+    private final Clock clock;
 
     @Transactional
     public Wallet createFor(Long userId) {
@@ -118,7 +120,7 @@ public class WalletService {
         }
         wallet.applyDelta(availableDelta, heldDelta);
         return transactionRepository.save(
-                new WalletTransaction(wallet, type, amount, availableDelta, heldDelta, listingId));
+                new WalletTransaction(wallet, type, amount, availableDelta, heldDelta, listingId, clock.instant()));
     }
 
     private static ApiException walletNotFound(Long userId) {

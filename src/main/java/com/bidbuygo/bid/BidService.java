@@ -1,10 +1,12 @@
 package com.bidbuygo.bid;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
+import com.bidbuygo.auction.AuctionProperties;
 import com.bidbuygo.auth.AuthUser;
 import com.bidbuygo.common.error.ApiException;
 import com.bidbuygo.common.money.Money;
@@ -33,6 +35,7 @@ public class BidService {
     private final AuctionPolicyService policyService;
     private final UserService userService;
     private final BidRepository bidRepository;
+    private final AuctionProperties auctionProperties;
     private final Clock clock;
 
     /**
@@ -41,7 +44,7 @@ public class BidService {
      * Validation stops at the first failing rule.
      */
     @Transactional
-    public BidResponse placeBid(Long listingId, Long bidderId, long amount) {
+    public PlacedBidResponse placeBid(Long listingId, Long bidderId, long amount) {
         Listing listing = listingService.lockForUpdate(listingId);
         Instant now = clock.instant();
 
@@ -89,7 +92,13 @@ public class BidService {
         walletService.hold(bidderWallet, toHold, listingId);
         Bid bid = bidRepository.save(new Bid(listingId, bidderId, amount, now));
         listing.acceptBid(bidderId, amount);
-        return BidResponse.from(bid, userService.get(bidderId).getEmail());
+
+        // Anti-sniping: a bid in the closing window pushes the end out, still under the listing lock.
+        boolean extended = !Duration.between(now, listing.getEndsAt()).minus(auctionProperties.snipeWindow()).isPositive();
+        if (extended) {
+            listing.extendEndsAt(auctionProperties.extension());
+        }
+        return PlacedBidResponse.from(bid, userService.get(bidderId).getEmail(), listing.getEndsAt(), extended);
     }
 
     /** Public bid history, newest first. Hidden (404) wherever the listing itself is hidden. */

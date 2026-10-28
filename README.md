@@ -313,3 +313,24 @@ None of the following is built yet:
 - **Backoff and dead-letter handling** for settlements that fail repeatedly. Today a failed settlement is logged
   and retried on every pass.
 - **A payment gateway**, replacing simulated wallet top-ups.
+
+## Image credits
+
+The dev seed listings (`dev.DevDataSeeder`) show these photos from Wikimedia Commons. They are hotlinked
+from `upload.wikimedia.org` as 960px thumbnails, not stored in this repository. Authors and licences are as
+stated on each file's Commons page.
+
+| Listing | Title | Author | Licence |
+|---|---|---|---|
+| Vintage Polaroid SX-70 camera | [Polaroid SX-70 (4462345243)](https://commons.wikimedia.org/wiki/File:Polaroid_SX-70_%284462345243%29.jpg) | Thomas Backa | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| Vintage Polaroid SX-70 camera | [Polaroid SX-70 camera](https://commons.wikimedia.org/wiki/File:Polaroid_SX-70_camera.jpg) | Michael Gatchell | [CC BY 2.0](https://creativecommons.org/licenses/by/2.0/) |
+| Handwoven jute tote bag | [Baghashtag-Jute-bag](https://commons.wikimedia.org/wiki/File:Baghashtag-Jute-bag.jpg) | Efkanakbiyik | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| Handwoven jute tote bag | [Jute Bag](https://commons.wikimedia.org/wiki/File:Jute_Bag.JPG) | Fahad Faisal | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) |
+| Signed 2011 World Cup cricket ball | [GandM Purist 156g cricket ball n01](https://commons.wikimedia.org/wiki/File:GandM_Purist_156g_cricket_ball_n01.jpg) | Marie-Lan Nguyen | [CC BY 2.5](https://creativecommons.org/licenses/by/2.5/) |
+| Signed 2011 World Cup cricket ball | [GandM Purist-Grace match cricket balls](https://commons.wikimedia.org/wiki/File:GandM_Purist-Grace_match_cricket_balls.jpg) | Marie-Lan Nguyen | [CC BY 2.5](https://creativecommons.org/licenses/by/2.5/) |
+| Limited-edition art print (12/50) | [Coy Avon Seward - lithograph from an edition of 200 is signed and dated 1936 by the artist in pencil lower right and titled Adobe Village - New Mexico lower left](https://commons.wikimedia.org/wiki/File:Coy_Avon_Seward_-_lithograph_from_an_edition_of_200_is_signed_and_dated_1936_by_the_artist_in_pencil_lower_right_and_titled_Adobe_Village_-_New_Mexico_lower_left.jpg) | Coy Avon Seward | Public domain |
+| Limited-edition art print (12/50) | [Framed Print](https://commons.wikimedia.org/wiki/File:Framed_Print_MET_frame_1991.219.1.jpg) | The Metropolitan Museum of Art (no individual author listed) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+
+The photos are not modified, apart from Wikimedia's own resizing to thumbnails. They show similar items, not the
+exact seeded ones: the cricket balls are plain match balls, not a signed 2011 World Cup ball, and the art prints
+are lithographs, not giclée prints.

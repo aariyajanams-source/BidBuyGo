@@ -8,8 +8,8 @@ import java.util.Map;
 import java.util.Set;
 
 import com.bidbuygo.common.error.ApiException;
+import com.bidbuygo.common.persistence.Locks;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.LockModeType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -65,12 +65,7 @@ public class WalletService {
         List<Long> walletIds = walletRepository.findIdsByUserIdIn(distinctUserIds).stream().sorted().toList();
         Map<Long, Wallet> byUserId = new HashMap<>();
         for (Long walletId : walletIds) {
-            Wallet wallet = walletRepository.findByIdForUpdate(walletId).orElseThrow();
-            if (!isWriteLocked(wallet)) {
-                // Loaded unlocked earlier in this transaction: the query returned that instance as-is, possibly
-                // with stale balances. Re-read it under the lock.
-                entityManager.refresh(wallet, LockModeType.PESSIMISTIC_WRITE);
-            }
+            Wallet wallet = Locks.ensureWriteLocked(entityManager, walletRepository.findByIdForUpdate(walletId).orElseThrow());
             byUserId.put(wallet.getUserId(), wallet);
         }
         for (Long userId : distinctUserIds) {
@@ -117,22 +112,13 @@ public class WalletService {
         if (amount <= 0) {
             throw new IllegalArgumentException("Ledger amount must be positive, got " + amount);
         }
-        if (!isWriteLocked(wallet)) {
+        if (!Locks.isWriteLocked(entityManager, wallet)) {
             throw new IllegalStateException("Wallet " + wallet.getId() + " must be locked via lockWallets before a "
                     + type + " entry (current lock mode: " + entityManager.getLockMode(wallet) + ")");
         }
         wallet.applyDelta(availableDelta, heldDelta);
         return transactionRepository.save(
                 new WalletTransaction(wallet, type, amount, availableDelta, heldDelta, listingId));
-    }
-
-    /**
-     * True if this transaction holds the wallet row exclusively: locked with PESSIMISTIC_WRITE, or inserted/updated
-     * by this transaction (Hibernate's WRITE mode, which JPA reports as PESSIMISTIC_FORCE_INCREMENT).
-     */
-    private boolean isWriteLocked(Wallet wallet) {
-        LockModeType mode = entityManager.getLockMode(wallet);
-        return mode == LockModeType.PESSIMISTIC_WRITE || mode == LockModeType.PESSIMISTIC_FORCE_INCREMENT;
     }
 
     private static ApiException walletNotFound(Long userId) {

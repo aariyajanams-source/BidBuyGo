@@ -83,6 +83,10 @@ public class Listing {
 
     private Long highBidderId;
 
+    /** Accepted bids; kept here (updated under the listing lock) so listing reads don't need the bid table. */
+    @Column(nullable = false)
+    private int bidCount = 0;
+
     static Listing create(Long sellerId, ListingDraft draft, Instant now) {
         Listing listing = new Listing();
         listing.sellerId = sellerId;
@@ -118,9 +122,10 @@ public class Listing {
         this.rejectionReason = reason;
     }
 
-    /** Records a new leading bid. Callers must hold the listing's PESSIMISTIC_WRITE lock. */
-    void recordHighBid(Long bidderId, long amount) {
+    /** Records an accepted bid as the new leader. Callers must hold the listing's PESSIMISTIC_WRITE lock. */
+    public void acceptBid(Long bidderId, long amount) {
         this.highBidderId = bidderId;
         this.currentHighBid = amount;
+        this.bidCount++;
     }
 }

@@ -35,9 +35,10 @@ public class SecurityConfig {
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(errorHandler).accessDeniedHandler(errorHandler))
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers(path.matcher("/auth/**"), path.matcher("/error")).permitAll();
-                    // Browsing is public; every other /listings call (create, check) needs a token.
+                    // Browsing is public; every other /listings call (create, check, buy, bid) needs a token.
                     auth.requestMatchers(path.matcher(HttpMethod.GET, "/listings"),
-                            path.matcher(HttpMethod.GET, "/listings/{id}")).permitAll();
+                            path.matcher(HttpMethod.GET, "/listings/{id}"),
+                            path.matcher(HttpMethod.GET, "/listings/{id}/bids")).permitAll();
                     // Controllers also use @PreAuthorize; this is a backstop for any admin endpoint that forgets it.
                     auth.requestMatchers(path.matcher("/admin/**")).hasRole("ADMIN");
                     auth.requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll();

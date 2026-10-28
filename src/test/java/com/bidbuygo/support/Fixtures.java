@@ -10,8 +10,11 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import com.bidbuygo.listing.ConditionGrade;
+import com.bidbuygo.listing.Listing;
 import com.bidbuygo.listing.ListingDraft;
+import com.bidbuygo.listing.ListingRepository;
 import com.bidbuygo.listing.ListingService;
+import com.bidbuygo.listing.ListingStatus;
 import com.bidbuygo.listing.ListingType;
 import com.bidbuygo.user.Role;
 import com.bidbuygo.user.User;
@@ -51,6 +54,36 @@ public final class Fixtures {
                 ConditionGrade.GOOD, List.of("https://img.test/1.jpg", "https://img.test/2.jpg"), ListingType.AUCTION,
                 null, 20_000L, 50_000L, Instant.now().plus(1, ChronoUnit.DAYS));
         return listingService.create(sellerId, draft).id();
+    }
+
+    /**
+     * The auction hold invariant: for every ACTIVE auction, the net money held for it across all wallets is exactly
+     * currentHighBid, and all of it sits in the high bidder's wallet.
+     */
+    public static void assertAuctionHoldsMatchHighBids(ListingRepository listingRepository,
+                                                       WalletRepository walletRepository,
+                                                       WalletTransactionRepository transactionRepository) {
+        Map<Long, Long> walletIdByUser = walletRepository.findAll().stream()
+                .collect(Collectors.toMap(Wallet::getUserId, Wallet::getId));
+        Map<Long, Map<Long, Long>> heldByListingThenWallet = transactionRepository.findAll().stream()
+                .filter(t -> t.getListingId() != null)
+                .collect(Collectors.groupingBy(WalletTransaction::getListingId,
+                        Collectors.groupingBy(t -> t.getWallet().getId(),
+                                Collectors.summingLong(WalletTransaction::getHeldDelta))));
+
+        for (Listing listing : listingRepository.findAll()) {
+            if (listing.getType() != ListingType.AUCTION || listing.getStatus() != ListingStatus.ACTIVE) {
+                continue;
+            }
+            Map<Long, Long> nonZeroHolds = heldByListingThenWallet.getOrDefault(listing.getId(), Map.of())
+                    .entrySet().stream()
+                    .filter(e -> e.getValue() != 0)
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+            Map<Long, Long> expected = listing.getHighBidderId() == null
+                    ? Map.of()
+                    : Map.of(walletIdByUser.get(listing.getHighBidderId()), listing.getCurrentHighBid());
+            assertThat(nonZeroHolds).as("holds by wallet for auction %d", listing.getId()).isEqualTo(expected);
+        }
     }
 
     /** Sum of available + held across every wallet. */

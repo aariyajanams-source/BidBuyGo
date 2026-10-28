@@ -17,28 +17,33 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
+import com.bidbuygo.bid.BidService;
+import com.bidbuygo.support.Fixtures;
 import com.bidbuygo.support.TestAuth;
+import com.bidbuygo.user.Role;
+import com.bidbuygo.user.User;
+import com.bidbuygo.user.UserService;
+import com.bidbuygo.wallet.WalletService;
+import com.bidbuygo.support.IntegrationTest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
-import org.springframework.transaction.support.TransactionTemplate;
 
-@SpringBootTest
-@AutoConfigureMockMvc
+@IntegrationTest
 class ListingIntegrationTest {
 
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper objectMapper;
     @Autowired ListingRepository listingRepository;
-    @Autowired TransactionTemplate tx;
+    @Autowired BidService bidService;
+    @Autowired UserService userService;
+    @Autowired WalletService walletService;
 
     private String verifiedSeller;
     private String newSeller;
@@ -211,7 +216,8 @@ class ListingIntegrationTest {
     @Test
     void auctionWithHighBidderCannotBeRejected() throws Exception {
         long id = createdId(verifiedSeller, auctionDraft());
-        tx.executeWithoutResult(status -> listingRepository.findById(id).orElseThrow().recordHighBid(999L, 25_000L));
+        User bidder = Fixtures.fundedUser(userService, walletService, Role.BUYER, 50_000);
+        bidService.placeBid(id, bidder.getId(), 25_000);
 
         reject(id, "Policy violation")
                 .andExpect(status().isConflict())

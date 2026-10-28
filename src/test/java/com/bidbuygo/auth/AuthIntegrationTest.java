@@ -13,19 +13,17 @@ import java.util.UUID;
 
 import com.bidbuygo.user.UserRepository;
 import com.bidbuygo.wallet.WalletRepository;
+import com.bidbuygo.support.IntegrationTest;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
-@SpringBootTest
-@AutoConfigureMockMvc
+@IntegrationTest
 class AuthIntegrationTest {
 
     @Autowired MockMvc mvc;

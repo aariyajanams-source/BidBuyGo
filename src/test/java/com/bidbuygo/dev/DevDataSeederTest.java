@@ -16,11 +16,11 @@ import com.bidbuygo.wallet.Wallet;
 import com.bidbuygo.wallet.WalletRepository;
 import com.bidbuygo.wallet.WalletTransactionRepository;
 import com.bidbuygo.wallet.WalletTransactionType;
+import com.bidbuygo.support.IntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
+@IntegrationTest
 class DevDataSeederTest {
 
     @Autowired DevDataSeeder seeder;

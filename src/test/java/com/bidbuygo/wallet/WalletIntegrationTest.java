@@ -17,20 +17,18 @@ import java.util.concurrent.Future;
 import com.bidbuygo.user.Role;
 import com.bidbuygo.user.User;
 import com.bidbuygo.user.UserService;
+import com.bidbuygo.support.IntegrationTest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-@SpringBootTest
-@AutoConfigureMockMvc
+@IntegrationTest
 class WalletIntegrationTest {
 
     @Autowired MockMvc mvc;

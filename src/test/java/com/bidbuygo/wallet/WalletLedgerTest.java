@@ -11,14 +11,14 @@ import com.bidbuygo.support.Fixtures;
 import com.bidbuygo.user.Role;
 import com.bidbuygo.user.User;
 import com.bidbuygo.user.UserService;
+import com.bidbuygo.support.IntegrationTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.support.TransactionTemplate;
 
-@SpringBootTest
+@IntegrationTest
 class WalletLedgerTest {
 
     @Autowired WalletService walletService;

@@ -1,5 +1,6 @@
 package com.bidbuygo.dev;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -40,6 +41,7 @@ class DevDataSeeder implements ApplicationRunner {
     private final UserService userService;
     private final WalletService walletService;
     private final ListingService listingService;
+    private final Clock clock;
 
     @Override
     @Transactional
@@ -51,7 +53,7 @@ class DevDataSeeder implements ApplicationRunner {
         seedUser("buyer2@bidbuygo.dev", Role.BUYER, false, 0, BUYER_STARTING_BALANCE);
 
         User seller = userService.findByEmail(VERIFIED_SELLER).orElseThrow();
-        listingDrafts(Instant.now()).forEach(draft -> seedListing(seller, draft));
+        listingDrafts(clock.instant()).forEach(draft -> seedListing(seller, draft));
     }
 
     static List<ListingDraft> listingDrafts(Instant now) {

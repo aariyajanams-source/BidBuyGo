@@ -1,7 +1,10 @@
 package com.bidbuygo.user;
 
+import java.util.Collection;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import com.bidbuygo.common.error.ApiException;
 import com.bidbuygo.wallet.WalletService;
@@ -45,6 +48,11 @@ public class UserService {
     public User get(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found", "No user with id " + id));
+    }
+
+    @Transactional(readOnly = true)
+    public Map<Long, String> emailsByIds(Collection<Long> ids) {
+        return userRepository.findAllById(ids).stream().collect(Collectors.toMap(User::getId, User::getEmail));
     }
 
     @Transactional(propagation = Propagation.MANDATORY)

@@ -33,8 +33,11 @@ Admins set the auction eligibility policy and review listings.
 - Auction eligibility lives in `policy.EligibilityService.evaluate`; it collects every failing rule, never stops early.
   The policy is a single row (id 1) seeded in all profiles by `AuctionPolicySeeder`. Seeders are ordered
   ApplicationRunners: policy `@Order(0)`, dev data `@Order(10)`.
-- Integration tests share one Spring context and H2 database: use unique data, and restore anything global
-  (e.g. the auction policy) in `@AfterEach`.
+- Time: inject `java.time.Clock` (bean in `common.time.ClockConfig`); never call `Instant.now()` in listing/bid logic.
+- Tests: annotate Spring tests with `support.IntegrationTest`, never a bare `@SpringBootTest`. A second Spring context
+  would re-run create-drop on the shared in-memory H2 database. Use unique data (`support.Fixtures`) and restore
+  anything global (the auction policy; `MutableClock.reset()` after `advance`) in `@AfterEach`.
+  Money tests should finish with `Fixtures.assertLedgerReconstructsEveryWallet` and `assertAuctionHoldsMatchHighBids`.
 
 ## Concurrency
 
@@ -48,6 +51,11 @@ Admins set the auction eligibility policy and review listings.
   2. `walletService.lockWallets(userIds)`: locks in ascending wallet id order. Never lock wallets any other way.
   3. `hold` / `release` / `captureHeld` / `chargeAvailable` / `credit` (propagation MANDATORY; they refuse
      unlocked wallets and negative balances).
+  Both lock helpers use `common.persistence.Locks.ensureWriteLocked`, which re-reads a row that was already loaded
+  unlocked in the transaction (a locking query otherwise hands back the stale instance).
+- Auction hold invariant: for each ACTIVE auction, the only money held for it is `currentHighBid`, held from
+  `highBidderId` (every HOLD/RELEASE row carries the listingId). `BidService.placeBid` releases the previous leader in
+  full, or holds only the difference when the leader raises their own bid.
 - Seller `completedOrders` is incremented with an atomic UPDATE (`UserService.incrementCompletedOrders`).
 - `orders.listing_id` is unique: one sale per listing, enforced by the database.
 

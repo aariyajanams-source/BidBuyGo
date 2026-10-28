@@ -1,9 +1,9 @@
 package com.bidbuygo;
 
+import com.bidbuygo.support.IntegrationTest;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
+@IntegrationTest
 class BidBuyGoApplicationTests {
 
     @Test

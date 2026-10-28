@@ -14,7 +14,6 @@ import com.bidbuygo.listing.Listing;
 import com.bidbuygo.listing.ListingService;
 import com.bidbuygo.listing.ListingStatus;
 import com.bidbuygo.listing.ListingType;
-import com.bidbuygo.policy.AuctionPolicyService;
 import com.bidbuygo.user.UserService;
 import com.bidbuygo.wallet.Wallet;
 import com.bidbuygo.wallet.WalletService;
@@ -32,7 +31,6 @@ public class BidService {
 
     private final ListingService listingService;
     private final WalletService walletService;
-    private final AuctionPolicyService policyService;
     private final UserService userService;
     private final BidRepository bidRepository;
     private final AuctionProperties auctionProperties;
@@ -67,7 +65,7 @@ public class BidService {
 
         Long previousBidder = listing.getHighBidderId();
         Long currentHigh = listing.getCurrentHighBid();
-        long minimum = minimumBid(listing, currentHigh);
+        long minimum = listingService.minimumNextBid(listing);
         if (amount < minimum) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Bid too low", "Bid must be at least " + Money.format(minimum)
                     + (currentHigh == null ? " (the starting price)" : " (current bid plus the minimum increment)"));
@@ -108,11 +106,5 @@ public class BidService {
         List<Bid> bids = bidRepository.findByListingIdOrderByCreatedAtDescIdDesc(listingId);
         Map<Long, String> emails = userService.emailsByIds(bids.stream().map(Bid::getBidderId).distinct().toList());
         return bids.stream().map(bid -> BidResponse.from(bid, emails.get(bid.getBidderId()))).toList();
-    }
-
-    private long minimumBid(Listing listing, Long currentHigh) {
-        return currentHigh == null
-                ? listing.getStartPrice()
-                : currentHigh + policyService.get().getMinIncrementPaise();
     }
 }

@@ -58,7 +58,7 @@ public class AuctionSettlementService {
 
         long winningBid = listing.getCurrentHighBid();
         Long sellerId = listing.getSellerId();
-        if (winningBid >= listing.getReservePrice()) {
+        if (listing.isReserveMet()) {
             Map<Long, Wallet> wallets = walletService.lockWallets(List.of(winnerId, sellerId));
             walletService.captureHeld(wallets.get(winnerId), winningBid, listingId);
             walletService.credit(wallets.get(sellerId), winningBid, listingId);

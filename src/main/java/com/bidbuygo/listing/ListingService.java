@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 import com.bidbuygo.auth.AuthUser;
 import com.bidbuygo.common.error.ApiException;
 import com.bidbuygo.common.persistence.Locks;
+import com.bidbuygo.policy.AuctionPolicyService;
 import com.bidbuygo.policy.EligibilityResult;
 import com.bidbuygo.policy.EligibilityService;
 import com.bidbuygo.user.Role;
@@ -26,6 +27,7 @@ public class ListingService {
 
     private final ListingRepository listingRepository;
     private final EligibilityService eligibilityService;
+    private final AuctionPolicyService policyService;
     private final UserService userService;
     private final EntityManager entityManager;
     private final Clock clock;
@@ -39,7 +41,8 @@ public class ListingService {
                     eligibility.reasons());
         }
         Listing listing = listingRepository.save(Listing.create(sellerId, draft, clock.instant()));
-        return ListingResponse.from(listing);
+        // The caller is the seller, so they see their own reserve.
+        return ListingResponse.from(listing, false, true, minNextBid(listing, minIncrement()));
     }
 
     /** Dry run of create: same validation and eligibility, nothing saved. */
@@ -54,10 +57,11 @@ public class ListingService {
     }
 
     @Transactional(readOnly = true)
-    public List<ListingResponse> listActive(ListingType type, String category) {
+    public List<ListingResponse> listActive(ListingType type, String category, AuthUser viewer) {
         String normalized = category == null || category.isBlank() ? null : Listing.normalizeCategory(category);
+        long minIncrement = minIncrement();
         return listingRepository.search(ListingStatus.ACTIVE, type, normalized).stream()
-                .map(ListingResponse::from)
+                .map(listing -> toResponse(listing, viewer, minIncrement))
                 .toList();
     }
 
@@ -67,29 +71,30 @@ public class ListingService {
      */
     @Transactional(readOnly = true)
     public ListingResponse get(Long id, AuthUser viewer) {
-        return ListingResponse.from(findVisible(id, viewer), viewer);
+        return toResponse(findVisible(id, viewer), viewer, minIncrement());
     }
 
     /** Throws 404 unless the listing exists and the viewer may see it. */
     @Transactional(readOnly = true)
     public Listing findVisible(Long id, AuthUser viewer) {
         Listing listing = listingRepository.findById(id).orElseThrow(() -> notFound(id));
-        if (listing.getStatus() == ListingStatus.REJECTED && !canSeeRejected(listing, viewer)) {
+        if (listing.getStatus() == ListingStatus.REJECTED && !isSellerOrAdmin(listing, viewer)) {
             throw notFound(id);
         }
         return listing;
     }
 
     @Transactional(readOnly = true)
-    public List<ListingResponse> listForAdmin(ListingStatus status) {
+    public List<ListingResponse> listForAdmin(ListingStatus status, AuthUser viewer) {
         List<Listing> listings = status == null
                 ? listingRepository.findAllByOrderByIdDesc()
                 : listingRepository.findByStatusOrderByIdDesc(status);
-        return listings.stream().map(ListingResponse::from).toList();
+        long minIncrement = minIncrement();
+        return listings.stream().map(listing -> toResponse(listing, viewer, minIncrement)).toList();
     }
 
     @Transactional
-    public ListingResponse reject(Long id, String reason) {
+    public ListingResponse reject(Long id, String reason, AuthUser viewer) {
         Listing listing = lockForUpdate(id);
         if (listing.getStatus() != ListingStatus.ACTIVE) {
             throw new ApiException(HttpStatus.CONFLICT, "Listing cannot be rejected",
@@ -100,7 +105,7 @@ public class ListingService {
                     "This auction already has bids; rejecting it would require refunding held bids");
         }
         listing.reject(reason.trim());
-        return ListingResponse.from(listing);
+        return toResponse(listing, viewer, minIncrement());
     }
 
     /**
@@ -111,6 +116,15 @@ public class ListingService {
     public Listing lockForUpdate(Long id) {
         Listing listing = listingRepository.findByIdForUpdate(id).orElseThrow(() -> notFound(id));
         return Locks.ensureWriteLocked(entityManager, listing);
+    }
+
+    /**
+     * The lowest bid placeBid accepts on this auction under the current policy. BidService validates against this,
+     * and responses report the same value as minNextBid.
+     */
+    @Transactional(readOnly = true)
+    public long minimumNextBid(Listing listing) {
+        return listing.minimumNextBid(minIncrement());
     }
 
     /** Ids of ACTIVE auctions whose end time has passed. No locks; callers re-check under lockForUpdate. */
@@ -129,7 +143,23 @@ public class ListingService {
         return listingRepository.existsBySellerIdAndTitle(sellerId, title);
     }
 
-    private static boolean canSeeRejected(Listing listing, AuthUser viewer) {
+    /** Every listing response goes through here: it decides what this viewer may see (null viewer = anonymous). */
+    private ListingResponse toResponse(Listing listing, AuthUser viewer, long minIncrement) {
+        Boolean viewerIsHighBidder = viewer == null ? null : viewer.id().equals(listing.getHighBidderId());
+        return ListingResponse.from(listing, viewerIsHighBidder, isSellerOrAdmin(listing, viewer),
+                minNextBid(listing, minIncrement));
+    }
+
+    private Long minNextBid(Listing listing, long minIncrement) {
+        return listing.isOpenForBids(clock.instant()) ? listing.minimumNextBid(minIncrement) : null;
+    }
+
+    private long minIncrement() {
+        return policyService.get().getMinIncrementPaise();
+    }
+
+    /** The seller and admins see private fields: rejected listings and the reserve price. */
+    private static boolean isSellerOrAdmin(Listing listing, AuthUser viewer) {
         return viewer != null && (viewer.role() == Role.ADMIN || viewer.id().equals(listing.getSellerId()));
     }
 

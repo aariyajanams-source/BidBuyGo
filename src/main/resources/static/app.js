@@ -711,7 +711,7 @@ function startAuctionPanel(ctx, panel, initial, setStatus) {
   const currentValue = el('span', { 'data-testid': 'current-bid' });
   const currentLabel = el('span', { class: 'muted' });
   const bidCountValue = el('span', { 'data-testid': 'bid-count' });
-  const reserveValue = el('span');
+  const reserveValue = el('span', { 'data-testid': 'reserve' });
   const countdownValue = el('span', { class: 'countdown', 'data-testid': 'countdown' });
   const endsAtValue = el('span', { class: 'small' });
   const extendedNotice = el('div', { class: 'notice flash', hidden: true, 'data-testid': 'extended-notice' });
@@ -725,7 +725,8 @@ function startAuctionPanel(ctx, panel, initial, setStatus) {
   const minHint = el('div', { class: 'hint', 'data-testid': 'min-bid' });
   const bidButton = el('button', { type: 'submit', 'data-testid': 'place-bid' }, 'Place bid');
   const bidForm = el('form', { class: 'stack' }, field('Your bid (₹)', amountInput), minHint, bidButton);
-  if (initial.currentHighBid === null) amountInput.value = paiseToRupeesInput(initial.startPrice);
+  // The input defaults to the server's minNextBid; a poll only replaces it if the viewer hasn't typed over it.
+  let defaultAmount = '';
 
   const blocker = actionBlocker(initial, 'bid');
   formBox.append(blocker ?? bidForm);
@@ -753,6 +754,7 @@ function startAuctionPanel(ctx, panel, initial, setStatus) {
         const placed = await api('POST', `/listings/${listing.id}/bids`, { amount });
         showInfo(`Bid of ${formatPaise(placed.amountPaise)} placed${placed.extended ? `. Anti-sniping extended the auction to ${formatDateTime(placed.endsAt)}` : ''}.`);
         amountInput.value = '';
+        defaultAmount = '';
         await Promise.all([poll(), refreshSession()]);
       } catch (error) {
         showError(error);
@@ -781,11 +783,18 @@ function startAuctionPanel(ctx, panel, initial, setStatus) {
     currentLabel.textContent = hasBids ? 'Current bid' : 'Starting price';
     currentValue.textContent = formatPaise(hasBids ? listing.currentHighBid : listing.startPrice);
     bidCountValue.textContent = String(listing.bidCount);
-    reserveValue.textContent = hasBids && listing.currentHighBid >= listing.reservePrice ? 'Met' : 'Not met yet';
+    // reservePrice is only sent to the seller and admins; everyone else gets just reserveMet.
+    const met = listing.reserveMet ? 'Met' : 'Not met yet';
+    reserveValue.textContent = listing.reservePrice != null ? `${formatPaise(listing.reservePrice)} (${met})` : met;
     endsAtValue.textContent = formatDateTime(listing.endsAt);
-    minHint.textContent = hasBids
-      ? `Must beat ${formatPaise(listing.currentHighBid)} by at least the minimum increment.`
-      : `Minimum bid: ${formatPaise(listing.startPrice)} (the starting price).`;
+    if (listing.minNextBid != null) {
+      minHint.textContent = `Minimum bid: ${formatPaise(listing.minNextBid)}${hasBids ? '' : ' (the starting price)'}.`;
+      const suggested = paiseToRupeesInput(listing.minNextBid);
+      if (amountInput.value === defaultAmount) amountInput.value = suggested;
+      defaultAmount = suggested;
+    } else {
+      minHint.textContent = '';
+    }
 
     const isLeader = listing.viewerIsHighBidder === true;
     leaderNotice.hidden = !isLeader || listing.status !== 'ACTIVE';

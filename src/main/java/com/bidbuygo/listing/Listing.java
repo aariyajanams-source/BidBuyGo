@@ -113,6 +113,24 @@ public class Listing {
         return listing;
     }
 
+    /**
+     * The lowest amount BidService.placeBid accepts: the start price until the first bid, then the current high bid
+     * plus the policy's increment. The only place this rule lives; responses and bid validation both call it.
+     */
+    public long minimumNextBid(long minIncrementPaise) {
+        return currentHighBid == null ? startPrice : currentHighBid + minIncrementPaise;
+    }
+
+    /** An ACTIVE auction that has not reached endsAt; bids are only accepted then. */
+    public boolean isOpenForBids(Instant now) {
+        return type == ListingType.AUCTION && status == ListingStatus.ACTIVE && endsAt.isAfter(now);
+    }
+
+    /** Whether the leading bid would sell the item at settlement. Auctions only. */
+    public boolean isReserveMet() {
+        return highBidderId != null && currentHighBid >= reservePrice;
+    }
+
     public static String normalizeCategory(String category) {
         return category.trim().toLowerCase(Locale.ROOT);
     }

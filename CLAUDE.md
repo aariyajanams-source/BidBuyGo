@@ -33,6 +33,13 @@ Admins set the auction eligibility policy and review listings.
 - Auction eligibility lives in `policy.EligibilityService.evaluate`; it collects every failing rule, never stops early.
   The policy is a single row (id 1) seeded in all profiles by `AuctionPolicySeeder`. Seeders are ordered
   ApplicationRunners: policy `@Order(0)`, dev data `@Order(10)`.
+- Listing responses: build every `ListingResponse` through `ListingService.toResponse(listing, viewer, …)`, which
+  decides what the viewer may see. `reservePrice` goes only to the listing's seller and ADMINs (omitted from the JSON
+  otherwise); everyone gets `reserveMet` (`Listing.isReserveMet`, also used by settlement). Never put the reserve amount
+  in an error reason, bid response or bid history.
+- Minimum next bid: `Listing.minimumNextBid(minIncrement)` is the only formula (start price, then currentHighBid +
+  policy increment). `BidService.placeBid` validates against `ListingService.minimumNextBid`, and responses report the
+  same value as `minNextBid` (null unless `Listing.isOpenForBids(now)`). Don't re-derive it anywhere else.
 - Time: inject `java.time.Clock` (bean in `common.time.ClockConfig`); never call `Instant.now()` in listing/bid logic.
 - Tests: annotate Spring tests with `support.IntegrationTest`, never a bare `@SpringBootTest`. A second Spring context
   would re-run create-drop on the shared in-memory H2 database. It also disables the scheduler; settle auctions by

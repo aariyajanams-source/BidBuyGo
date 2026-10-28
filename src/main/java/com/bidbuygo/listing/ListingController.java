@@ -37,11 +37,12 @@ public class ListingController {
         return listingService.check(principal.id(), draft);
     }
 
-    /** Public. */
+    /** Public; principal is null for anonymous callers. */
     @GetMapping
     public List<ListingResponse> list(@RequestParam(required = false) ListingType type,
-                                      @RequestParam(required = false) String category) {
-        return listingService.listActive(type, category);
+                                      @RequestParam(required = false) String category,
+                                      @AuthenticationPrincipal AuthUser principal) {
+        return listingService.listActive(type, category, principal);
     }
 
     /** Public; principal is null for anonymous callers. */

@@ -226,7 +226,7 @@ class BidIntegrationTest {
 
     @Test
     void inactiveListingIs409() throws Exception {
-        listingService.reject(auctionId, "Counterfeit");
+        listingService.reject(auctionId, "Counterfeit", null);
         Snapshot before = snapshot();
 
         bid(alice, auctionId, START)
@@ -366,7 +366,7 @@ class BidIntegrationTest {
 
     @Test
     void bidHistoryOfHiddenListingIs404() throws Exception {
-        listingService.reject(auctionId, "Counterfeit");
+        listingService.reject(auctionId, "Counterfeit", null);
 
         mvc.perform(get("/listings/{id}/bids", auctionId)).andExpect(status().isNotFound());
     }

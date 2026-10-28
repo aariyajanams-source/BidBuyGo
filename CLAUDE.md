@@ -76,6 +76,15 @@ Admins set the auction eligibility policy and review listings.
 - Seller `completedOrders` is incremented with an atomic UPDATE (`UserService.incrementCompletedOrders`).
 - `orders.listing_id` is unique: one sale per listing, enforced by the database.
 
+## Frontend
+
+- `src/main/resources/static/{index.html, app.js, style.css}`: vanilla ES module, hash routing, no build, no CDN.
+- Never put server data into HTML: build DOM with `el()` / `textContent`; only `safeHttpUrl` values go into `<img src>`.
+  `FrontendResourcesTest` fails if `app.js` contains `innerHTML`, `outerHTML`, `insertAdjacentHTML`, `document.write` or `eval(`.
+- Money crosses the UI boundary only through `formatPaise` (display) and `rupeesToPaise` (input; integer maths, no floats).
+- Views register timers with `every`/`later`; the router clears them all on navigation.
+- The shell files are public via explicit GET matchers in `SecurityConfig`; add any new static file there too.
+
 ## Out of scope (roadmap)
 
 WebSockets, Dutch auctions, auto-markdown, shill-bid flags, proxy bidding.

@@ -42,6 +42,10 @@ public class SecurityConfig {
                     // Controllers also use @PreAuthorize; this is a backstop for any admin endpoint that forgets it.
                     auth.requestMatchers(path.matcher("/admin/**")).hasRole("ADMIN");
                     auth.requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll();
+                    // The single-page frontend in src/main/resources/static. "/" forwards to /index.html, and Spring
+                    // Security checks forwards too. The API calls it makes are still gated per endpoint above.
+                    auth.requestMatchers(path.matcher(HttpMethod.GET, "/"), path.matcher(HttpMethod.GET, "/index.html"),
+                            path.matcher(HttpMethod.GET, "/app.js"), path.matcher(HttpMethod.GET, "/style.css")).permitAll();
                     if (dev) {
                         auth.requestMatchers(PathRequest.toH2Console()).permitAll();
                     }
